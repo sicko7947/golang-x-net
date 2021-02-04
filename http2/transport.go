@@ -1510,27 +1510,70 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 	}
 
 	enumerateHeaders := func(f func(name, value string)) {
+		const (
+			headerOrderKey       = "~~~header~order~~~"
+			pseudodeaderOrderKey = "~~~pseudoheader~order~~~"
+
+			phAuthority = ":authority"
+			phMethod    = ":method"
+			phPath      = ":path"
+			phScheme    = ":scheme"
+		)
+
+		headerOrder := req.Header[headerOrderKey]
+		if headerOrder == nil {
+			headerOrder = make([]string, 0, len(req.Header))
+			for k := range req.Header {
+				headerOrder = append(headerOrder, k)
+			}
+		}
+
+		pseudodeaderOrder := req.Header[pseudodeaderOrderKey]
+		if pseudodeaderOrder == nil {
+			pseudodeaderOrder = []string{phAuthority, phMethod, phPath, phScheme}
+		}
+
 		// 8.1.2.3 Request Pseudo-Header Fields
 		// The :path pseudo-header field includes the path and query parts of the
 		// target URI (the path-absolute production and optionally a '?' character
 		// followed by the query production (see Sections 3.3 and 3.4 of
 		// [RFC3986]).
-		f(":authority", host)
-		m := req.Method
-		if m == "" {
-			m = http.MethodGet
+
+		for _, ph := range pseudodeaderOrder {
+			switch ph {
+			case phAuthority:
+				f(":authority", host)
+
+			case phMethod:
+				m := req.Method
+				if m == "" {
+					m = http.MethodGet
+				}
+				f(":method", m)
+
+			case phPath:
+				if req.Method != "CONNECT" {
+					f(":path", path)
+				}
+
+			case phScheme:
+				if req.Method != "CONNECT" {
+					f(":scheme", req.URL.Scheme)
+				}
+			}
 		}
-		f(":method", m)
-		if req.Method != "CONNECT" {
-			f(":path", path)
-			f(":scheme", req.URL.Scheme)
-		}
+
 		if trailers != "" {
 			f("trailer", trailers)
 		}
 
 		var didUA bool
-		for k, vv := range req.Header {
+		for _, k := range headerOrder {
+			vv, gotHeader := req.Header[k]
+			if !gotHeader {
+				continue
+			}
+
 			if strings.EqualFold(k, "host") || strings.EqualFold(k, "content-length") {
 				// Host is :authority, already sent.
 				// Content-Length is automatic, set below.
@@ -1579,7 +1622,7 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 					}
 				}
 				continue
-			} else if strings.EqualFold(k, "~~~header~order~~~") || strings.EqualFold(k, "~~~pseudoheader~order~~~") {
+			} else if strings.EqualFold(k, headerOrderKey) || strings.EqualFold(k, pseudodeaderOrderKey) {
 				continue
 			}
 
