@@ -11,7 +11,7 @@ import (
 	"net"
 	"unsafe"
 
-	"golang.org/x/net/internal/socket"
+	"github.com/detunized/golang-x-net/internal/socket"
 )
 
 var compatFreeBSD32 bool // 386 emulation on amd64

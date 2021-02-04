@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/net/context"
+	"github.com/detunized/golang-x-net/context"
 )
 
 // This example passes a context with a timeout to tell a blocking function that

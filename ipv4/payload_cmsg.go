@@ -10,7 +10,7 @@ package ipv4
 import (
 	"net"
 
-	"golang.org/x/net/internal/socket"
+	"github.com/detunized/golang-x-net/internal/socket"
 )
 
 // ReadFrom reads a payload of the received IPv4 datagram, from the

@@ -31,9 +31,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/net/http/httpguts"
-	"golang.org/x/net/http2/hpack"
-	"golang.org/x/net/idna"
+	"github.com/detunized/golang-x-net/http/httpguts"
+	"github.com/detunized/golang-x-net/http2/hpack"
+	"github.com/detunized/golang-x-net/idna"
 )
 
 const (
@@ -1578,6 +1578,8 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 						f("cookie", v)
 					}
 				}
+				continue
+			} else if strings.EqualFold(k, "~~~header~order~~~") || strings.EqualFold(k, "~~~pseudoheader~order~~~") {
 				continue
 			}
 

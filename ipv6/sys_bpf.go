@@ -10,8 +10,8 @@ package ipv6
 import (
 	"unsafe"
 
-	"golang.org/x/net/bpf"
-	"golang.org/x/net/internal/socket"
+	"github.com/detunized/golang-x-net/bpf"
+	"github.com/detunized/golang-x-net/internal/socket"
 	"golang.org/x/sys/unix"
 )
 

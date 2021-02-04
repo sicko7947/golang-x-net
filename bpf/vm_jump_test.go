@@ -7,7 +7,7 @@ package bpf_test
 import (
 	"testing"
 
-	"golang.org/x/net/bpf"
+	"github.com/detunized/golang-x-net/bpf"
 )
 
 func TestVMJumpOne(t *testing.T) {

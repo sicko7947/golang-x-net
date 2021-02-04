@@ -17,7 +17,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"golang.org/x/net/http2"
+	"github.com/detunized/golang-x-net/http2"
 )
 
 func TestSettingsAckSwallowWriter(t *testing.T) {

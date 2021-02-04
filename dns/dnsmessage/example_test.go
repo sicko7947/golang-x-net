@@ -9,7 +9,7 @@ import (
 	"net"
 	"strings"
 
-	"golang.org/x/net/dns/dnsmessage"
+	"github.com/detunized/golang-x-net/dns/dnsmessage"
 )
 
 func mustNewName(name string) dnsmessage.Name {

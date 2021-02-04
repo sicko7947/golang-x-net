@@ -20,8 +20,8 @@ import (
 	"syscall"
 	"testing"
 
-	"golang.org/x/net/internal/socket"
-	"golang.org/x/net/nettest"
+	"github.com/detunized/golang-x-net/internal/socket"
+	"github.com/detunized/golang-x-net/nettest"
 )
 
 func TestSocket(t *testing.T) {
@@ -308,7 +308,7 @@ func TestRace(t *testing.T) {
 		`
 package main
 import "net"
-import "golang.org/x/net/ipv4"
+import "github.com/detunized/golang-x-net/ipv4"
 var g byte
 func main() {
 	c, _ := net.ListenPacket("udp", "127.0.0.1:0")
@@ -325,7 +325,7 @@ func main() {
 		`
 package main
 import "net"
-import "golang.org/x/net/ipv4"
+import "github.com/detunized/golang-x-net/ipv4"
 func main() {
 	c, _ := net.ListenPacket("udp", "127.0.0.1:0")
 	cc := ipv4.NewPacketConn(c)

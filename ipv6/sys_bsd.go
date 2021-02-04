@@ -11,8 +11,8 @@ import (
 	"net"
 	"syscall"
 
-	"golang.org/x/net/internal/iana"
-	"golang.org/x/net/internal/socket"
+	"github.com/detunized/golang-x-net/internal/iana"
+	"github.com/detunized/golang-x-net/internal/socket"
 )
 
 var (

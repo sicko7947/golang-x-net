@@ -14,8 +14,8 @@ import (
 	"strings"
 	"sync"
 
-	"golang.org/x/net/http/httpguts"
-	"golang.org/x/net/http2/hpack"
+	"github.com/detunized/golang-x-net/http/httpguts"
+	"github.com/detunized/golang-x-net/http2/hpack"
 )
 
 const frameHeaderLen = 9
