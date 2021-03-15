@@ -670,27 +670,8 @@ func (t *Transport) newClientConn(c net.Conn, singleUse bool) (*ClientConn, erro
 	cc.cond = sync.NewCond(&cc.mu)
 	cc.flow.add(int32(initialWindowSize))
 
-	// TODO: adjust this writer size to account for frame size +
-	// MTU + crypto/tls record padding.
-	cc.bw = bufio.NewWriter(stickyErrWriter{c, &cc.werr})
-	cc.br = bufio.NewReader(c)
-	cc.fr = NewFramer(cc.bw, cc.br)
-	cc.fr.ReadMetaHeaders = hpack.NewDecoder(initialHeaderTableSize, nil)
-	cc.fr.MaxHeaderListSize = t.maxHeaderListSize()
-
-	// TODO: SetMaxDynamicTableSize, SetMaxDynamicTableSizeLimit on
-	// henc in response to SETTINGS frames?
-	cc.henc = hpack.NewEncoder(&cc.hbuf)
-
-	if t.AllowHTTP {
-		cc.nextStreamID = 3
-	}
-
-	if cs, ok := c.(connectionStater); ok {
-		state := cs.ConnectionState()
-		cc.tlsState = &state
-	}
-
+	// Apply custom initial settings
+	headerTableSize := uint32(initialHeaderTableSize)
 	initialSettings := t.InitialSettings
 	if initialSettings == nil {
 		t.streamFlow = transportDefaultStreamFlow
@@ -706,11 +687,14 @@ func (t *Transport) newClientConn(c net.Conn, singleUse bool) (*ClientConn, erro
 	} else {
 		streamFlowSet := false
 		for _, setting := range initialSettings {
-			if setting.ID == SettingMaxHeaderListSize {
-				t.MaxHeaderListSize = setting.Val
-			} else if setting.ID == SettingInitialWindowSize {
+			switch setting.ID {
+			case SettingHeaderTableSize:
+				headerTableSize = setting.Val
+			case SettingInitialWindowSize:
 				t.streamFlow = setting.Val
 				streamFlowSet = true
+			case SettingMaxHeaderListSize:
+				t.MaxHeaderListSize = setting.Val
 			}
 		}
 
@@ -718,6 +702,27 @@ func (t *Transport) newClientConn(c net.Conn, singleUse bool) (*ClientConn, erro
 			t.streamFlow = transportDefaultStreamFlow
 			initialSettings = append(initialSettings, Setting{ID: SettingInitialWindowSize, Val: t.streamFlow})
 		}
+	}
+
+	// TODO: adjust this writer size to account for frame size +
+	// MTU + crypto/tls record padding.
+	cc.bw = bufio.NewWriter(stickyErrWriter{c, &cc.werr})
+	cc.br = bufio.NewReader(c)
+	cc.fr = NewFramer(cc.bw, cc.br)
+	cc.fr.ReadMetaHeaders = hpack.NewDecoder(headerTableSize, nil)
+	cc.fr.MaxHeaderListSize = t.maxHeaderListSize()
+
+	// TODO: SetMaxDynamicTableSize, SetMaxDynamicTableSizeLimit on
+	// henc in response to SETTINGS frames?
+	cc.henc = hpack.NewEncoder(&cc.hbuf)
+
+	if t.AllowHTTP {
+		cc.nextStreamID = 3
+	}
+
+	if cs, ok := c.(connectionStater); ok {
+		state := cs.ConnectionState()
+		cc.tlsState = &state
 	}
 
 	cc.bw.Write(clientPreface)
