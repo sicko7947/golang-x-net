@@ -89,6 +89,11 @@ type Transport struct {
 	// plain-text "http" scheme. Note that this does not enable h2c support.
 	AllowHTTP bool
 
+	// InitialSettings allows the user to specify its own settings for the stream.
+	// If the user fails to provide valid settings. An empty list will send an
+	// empty settings frame. Leave nil to handle internally.
+	InitialSettings []Setting
+
 	// MaxHeaderListSize is the http2 SETTINGS_MAX_HEADER_LIST_SIZE to
 	// send in the initial settings frame. It is how many bytes
 	// of response headers are allowed. Unlike the http2 spec, zero here
@@ -128,6 +133,8 @@ type Transport struct {
 
 	connPoolOnce  sync.Once
 	connPoolOrDef ClientConnPool // non-nil version of ConnPool
+
+	streamFlow uint32
 }
 
 func (t *Transport) maxHeaderListSize() uint32 {
@@ -684,12 +691,33 @@ func (t *Transport) newClientConn(c net.Conn, singleUse bool) (*ClientConn, erro
 		cc.tlsState = &state
 	}
 
-	initialSettings := []Setting{
-		{ID: SettingEnablePush, Val: 0},
-		{ID: SettingInitialWindowSize, Val: transportDefaultStreamFlow},
-	}
-	if max := t.maxHeaderListSize(); max != 0 {
-		initialSettings = append(initialSettings, Setting{ID: SettingMaxHeaderListSize, Val: max})
+	initialSettings := t.InitialSettings
+	if initialSettings == nil {
+		t.streamFlow = transportDefaultStreamFlow
+
+		initialSettings = []Setting{
+			{ID: SettingEnablePush, Val: 0},
+			{ID: SettingInitialWindowSize, Val: t.streamFlow},
+		}
+
+		if max := t.maxHeaderListSize(); max != 0 {
+			initialSettings = append(initialSettings, Setting{ID: SettingMaxHeaderListSize, Val: max})
+		}
+	} else {
+		streamFlowSet := false
+		for _, setting := range initialSettings {
+			if setting.ID == SettingMaxHeaderListSize {
+				t.MaxHeaderListSize = setting.Val
+			} else if setting.ID == SettingInitialWindowSize {
+				t.streamFlow = setting.Val
+				streamFlowSet = true
+			}
+		}
+
+		if !streamFlowSet {
+			t.streamFlow = transportDefaultStreamFlow
+			initialSettings = append(initialSettings, Setting{ID: SettingInitialWindowSize, Val: t.streamFlow})
+		}
 	}
 
 	cc.bw.Write(clientPreface)
@@ -1742,7 +1770,7 @@ func (cc *ClientConn) newStream() *clientStream {
 	}
 	cs.flow.add(int32(cc.initialWindowSize))
 	cs.flow.setConnFlow(&cc.flow)
-	cs.inflow.add(transportDefaultStreamFlow)
+	cs.inflow.add(int32(cc.t.streamFlow))
 	cs.inflow.setConnFlow(&cc.inflow)
 	cc.nextStreamID += 2
 	cc.streams[cs.ID] = cs
@@ -2187,8 +2215,8 @@ func (b transportResponseBody) Read(p []byte) (n int, err error) {
 		// consumed by the client) when computing flow control for this
 		// stream.
 		v := int(cs.inflow.available()) + cs.bufPipe.Len()
-		if v < transportDefaultStreamFlow-transportDefaultStreamMinRefresh {
-			streamAdd = int32(transportDefaultStreamFlow - v)
+		if v < int(cc.t.streamFlow)-transportDefaultStreamMinRefresh {
+			streamAdd = int32(int(cc.t.streamFlow) - v)
 			cs.inflow.add(streamAdd)
 		}
 	}
