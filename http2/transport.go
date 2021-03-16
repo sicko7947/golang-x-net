@@ -1600,6 +1600,14 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 			f("trailer", trailers)
 		}
 
+		// Allow the user to order the "content-length" header as well
+		didContentLength := false
+		doContentLength := func() {
+			if shouldSendReqContentLength(req.Method, contentLength) {
+				f("content-length", strconv.FormatInt(contentLength, 10))
+			}
+		}
+
 		var didUA bool
 		for _, k := range headerOrder {
 			vv, gotHeader := req.Header[k]
@@ -1607,9 +1615,12 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 				continue
 			}
 
-			if strings.EqualFold(k, "host") || strings.EqualFold(k, "content-length") {
+			if strings.EqualFold(k, "host") {
 				// Host is :authority, already sent.
-				// Content-Length is automatic, set below.
+				continue
+			} else if strings.EqualFold(k, "content-length") {
+				doContentLength()
+				didContentLength = true
 				continue
 			} else if strings.EqualFold(k, "connection") || strings.EqualFold(k, "proxy-connection") ||
 				strings.EqualFold(k, "transfer-encoding") || strings.EqualFold(k, "upgrade") ||
@@ -1663,8 +1674,8 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 				f(k, v)
 			}
 		}
-		if shouldSendReqContentLength(req.Method, contentLength) {
-			f("content-length", strconv.FormatInt(contentLength, 10))
+		if !didContentLength {
+			doContentLength()
 		}
 		if addGzipHeader {
 			f("accept-encoding", "gzip")
