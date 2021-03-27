@@ -1,6 +1,6 @@
 module github.com/detunized/golang-x-net
 
-go 1.11
+go 1.16
 
 require (
 	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
