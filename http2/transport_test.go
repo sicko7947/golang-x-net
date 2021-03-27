@@ -1798,6 +1798,9 @@ func TestTransportChecksResponseHeaderListSize(t *testing.T) {
 }
 
 func TestTransportCookieHeaderSplit(t *testing.T) {
+	// Cookie header split is disabled in this fork
+	return
+
 	ct := newClientTester(t)
 	ct.client = func() error {
 		req, _ := http.NewRequest("GET", "https://dummy.tld/", nil)
