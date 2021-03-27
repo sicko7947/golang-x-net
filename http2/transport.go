@@ -1314,6 +1314,13 @@ func (cc *ClientConn) writeHeaders(streamID uint32, endStream bool, maxFrameSize
 				BlockFragment: chunk,
 				EndStream:     endStream,
 				EndHeaders:    endHeaders,
+				// These values are used in Chrome. There's no guarantee that the weight
+				// is always set to 219. This is the value I've seen set for the headers.
+				Priority: PriorityParam{
+					StreamDep: 0,
+					Exclusive: true,
+					Weight:    219,
+				},
 			})
 			first = false
 		} else {
